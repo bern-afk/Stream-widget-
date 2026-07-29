@@ -3,7 +3,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1920, initial-scale=1.0">
 <!-- Created by Nightwalker -->
-<!-- Kandy IRL Stream Widget — UTC+5:30, 1920x1080 OBS browser source -->
+<!-- Arugam Bay IRL Stream Widget — UTC+5:30, 1920x1080 OBS browser source -->
 <script>
 	var timeformat = '12'; // '12' or '24'
 
@@ -28,8 +28,8 @@
 		setTimeout(tempus, 1000);
 	}
 
-	// Weather — Open-Meteo, Kandy
-	var W_LAT = 7.2906, W_LON = 80.6337;
+	// Weather — Open-Meteo, Arugam Bay
+	var W_LAT = 6.8589, W_LON = 81.8304;
 	var WC = {
 		0:{l:'Clear',i:'☀️'},1:{l:'Mostly Clear',i:'🌤️'},2:{l:'Partly Cloudy',i:'⛅'},
 		3:{l:'Overcast',i:'☁️'},45:{l:'Foggy',i:'🌫️'},48:{l:'Icy Fog',i:'🌫️'},
@@ -70,7 +70,7 @@
 	}
 
 	function fetchAQI(retry) {
-		fetch('https://api.waqi.info/feed/geo:7.2906;80.6337/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
+		fetch('https://api.waqi.info/feed/geo:6.8589;81.8304/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
 		.then(function(r){return r.json();})
 		.then(function(d){
 			var aqi = (d.data && d.data.aqi) ? d.data.aqi : '--';
@@ -174,7 +174,7 @@ html, body {
 		</div>
 		<div class="row row-lg">
 			<span class="icon">📍</span>
-			<span class="label">Kandy, Sri Lanka</span>
+			<span class="label">Arugam Bay, Sri Lanka</span>
 		</div>
 		<div class="row row-sm">
 			<span class="icon" id="w-icon">⛅</span>
