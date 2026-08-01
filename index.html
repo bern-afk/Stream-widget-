@@ -3,12 +3,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1920, initial-scale=1.0">
 <!-- Created by Nightwalker -->
-<!-- London IRL Stream Widget — UTC+1 BST, 1920x1080 OBS browser source -->
+<!-- Dynamic IRL Stream Widget — fetches location from Cloudflare Worker -->
 <script>
-	var timeformat = '12'; // '12' or '24'
+	var timeformat = '12';
+	var W_LAT = 0, W_LON = 0, W_TZ = 'UTC', W_OFFSET = 0;
+	var currentRain = '--';
+	var currentAQIText = 'AQI --';
+	var aqiLoaded = false;
 
 	function getLocalTime() {
-		return new Date(new Date().getTime() + 1 * 3600000);
+		return new Date(new Date().getTime() + W_OFFSET * 3600000);
 	}
 	function pad(n) { return n.toString().padStart(2,'0'); }
 
@@ -28,8 +32,6 @@
 		setTimeout(tempus, 1000);
 	}
 
-	// Weather — Open-Meteo, London
-	var W_LAT = 51.5085, W_LON = -0.1257;
 	var WC = {
 		0:{l:'Clear',i:'☀️'},1:{l:'Mostly Clear',i:'🌤️'},2:{l:'Partly Cloudy',i:'⛅'},
 		3:{l:'Overcast',i:'☁️'},45:{l:'Foggy',i:'🌫️'},48:{l:'Icy Fog',i:'🌫️'},
@@ -39,14 +41,11 @@
 		95:{l:'Thunderstorm',i:'⛈️'},96:{l:'Thunderstorm',i:'⛈️'},99:{l:'Thunderstorm',i:'⛈️'}
 	};
 
-	var currentRain = '--';
-	var currentAQIText = 'AQI --';
-	var aqiLoaded = false;
-
 	function fetchWeather(retry) {
+		var tz = encodeURIComponent(W_TZ);
 		fetch('https://api.open-meteo.com/v1/forecast?latitude='+W_LAT+'&longitude='+W_LON
 			+'&current=temperature_2m,weather_code,precipitation_probability'
-			+'&temperature_unit=celsius&timezone=Europe%2FLondon')
+			+'&temperature_unit=celsius&timezone='+tz)
 		.then(function(r){return r.json();})
 		.then(function(d){
 			var tc   = Math.round(d.current.temperature_2m);
@@ -70,7 +69,7 @@
 	}
 
 	function fetchAQI(retry) {
-		fetch('https://api.waqi.info/feed/geo:51.5085;-0.1257/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
+		fetch('https://api.waqi.info/feed/geo:'+W_LAT+';'+W_LON+'/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
 		.then(function(r){return r.json();})
 		.then(function(d){
 			var aqi = (d.data && d.data.aqi) ? d.data.aqi : '--';
@@ -90,6 +89,26 @@
 			}
 		});
 		setTimeout(fetchAQI, 600000);
+	}
+
+	function fetchLocation(retry) {
+		fetch('https://cold-hat-e6a3.bernardmscott.workers.dev/location')
+		.then(function(r){return r.json();})
+		.then(function(d){
+			W_LAT    = d.lat;
+			W_LON    = d.lon;
+			W_TZ     = d.tz;
+			W_OFFSET = d.offset;
+			document.getElementById('location').textContent = d.city;
+			tempus();
+			fetchWeather();
+		})
+		.catch(function(){
+			var attempt = retry || 1;
+			if (attempt < 5) {
+				setTimeout(function(){ fetchLocation(attempt + 1); }, 5000);
+			}
+		});
 	}
 </script>
 
@@ -166,7 +185,7 @@ html, body {
 .row-md .label { font-size: 56px; font-weight: 700; padding-left: 20px; }
 </style>
 </head>
-<body onload="tempus(); fetchWeather();">
+<body onload="fetchLocation();">
 	<div class="wrap">
 		<div class="row row-xl">
 			<span class="icon">🕐</span>
@@ -174,7 +193,7 @@ html, body {
 		</div>
 		<div class="row row-lg">
 			<span class="icon">📍</span>
-			<span class="label">London, United Kingdom</span>
+			<span class="label" id="location">Loading...</span>
 		</div>
 		<div class="row row-sm">
 			<span class="icon" id="w-icon">⛅</span>
