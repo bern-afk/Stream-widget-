@@ -3,12 +3,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1920, initial-scale=1.0">
 <!-- Created by Nightwalker -->
-<!-- Arugam Bay IRL Stream Widget v2 — UTC+5:30, 1920x1080 OBS browser source -->
+<!-- London IRL Stream Widget — UTC+1 BST, 1920x1080 OBS browser source -->
 <script>
 	var timeformat = '12'; // '12' or '24'
 
 	function getLocalTime() {
-		return new Date(new Date().getTime() + 5.5 * 3600000);
+		return new Date(new Date().getTime() + 1 * 3600000);
 	}
 	function pad(n) { return n.toString().padStart(2,'0'); }
 
@@ -28,8 +28,8 @@
 		setTimeout(tempus, 1000);
 	}
 
-	// Weather — Open-Meteo, Arugam Bay
-	var W_LAT = 6.8589, W_LON = 81.8304;
+	// Weather — Open-Meteo, London
+	var W_LAT = 51.5085, W_LON = -0.1257;
 	var WC = {
 		0:{l:'Clear',i:'☀️'},1:{l:'Mostly Clear',i:'🌤️'},2:{l:'Partly Cloudy',i:'⛅'},
 		3:{l:'Overcast',i:'☁️'},45:{l:'Foggy',i:'🌫️'},48:{l:'Icy Fog',i:'🌫️'},
@@ -46,7 +46,7 @@
 	function fetchWeather(retry) {
 		fetch('https://api.open-meteo.com/v1/forecast?latitude='+W_LAT+'&longitude='+W_LON
 			+'&current=temperature_2m,weather_code,precipitation_probability'
-			+'&temperature_unit=celsius&timezone=Asia%2FColombo')
+			+'&temperature_unit=celsius&timezone=Europe%2FLondon')
 		.then(function(r){return r.json();})
 		.then(function(d){
 			var tc   = Math.round(d.current.temperature_2m);
@@ -70,7 +70,7 @@
 	}
 
 	function fetchAQI(retry) {
-		fetch('https://api.waqi.info/feed/geo:6.8589;81.8304/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
+		fetch('https://api.waqi.info/feed/geo:51.5085;-0.1257/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
 		.then(function(r){return r.json();})
 		.then(function(d){
 			var aqi = (d.data && d.data.aqi) ? d.data.aqi : '--';
@@ -174,7 +174,7 @@ html, body {
 		</div>
 		<div class="row row-lg">
 			<span class="icon">📍</span>
-			<span class="label">Arugam Bay, Sri Lanka</span>
+			<span class="label">London, United Kingdom</span>
 		</div>
 		<div class="row row-sm">
 			<span class="icon" id="w-icon">⛅</span>
