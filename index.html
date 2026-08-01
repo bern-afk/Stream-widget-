@@ -1,0 +1,188 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, initial-scale=1.0">
+<!-- Created by Nightwalker -->
+<!-- Arugam Bay IRL Stream Widget — UTC+5:30, 1920x1080 OBS browser source -->
+<script>
+	var timeformat = '12'; // '12' or '24'
+
+	function getLocalTime() {
+		return new Date(new Date().getTime() + 5.5 * 3600000);
+	}
+	function pad(n) { return n.toString().padStart(2,'0'); }
+
+	function ptime(now) {
+		var h = now.getUTCHours(), m = now.getUTCMinutes();
+		var ampm = h < 12 ? 'AM' : 'PM';
+		if (timeformat == '12') {
+			ampm = h < 12 ? 'AM' : 'PM';
+			h = h % 12 || 12;
+		}
+		return pad(h) + ':' + pad(m) + ' ' + ampm;
+	}
+
+	function tempus() {
+		var now = getLocalTime();
+		document.getElementById('datetime').textContent = ptime(now);
+		setTimeout(tempus, 1000);
+	}
+
+	// Weather — Open-Meteo, Arugam Bay
+	var W_LAT = 6.8589, W_LON = 81.8304;
+	var WC = {
+		0:{l:'Clear',i:'☀️'},1:{l:'Mostly Clear',i:'🌤️'},2:{l:'Partly Cloudy',i:'⛅'},
+		3:{l:'Overcast',i:'☁️'},45:{l:'Foggy',i:'🌫️'},48:{l:'Icy Fog',i:'🌫️'},
+		51:{l:'Light Drizzle',i:'🌦️'},53:{l:'Drizzle',i:'🌦️'},55:{l:'Heavy Drizzle',i:'🌧️'},
+		61:{l:'Light Rain',i:'🌧️'},63:{l:'Moderate Rain',i:'🌧️'},65:{l:'Heavy Rain',i:'🌧️'},
+		80:{l:'Showers',i:'🌦️'},81:{l:'Showers',i:'🌦️'},82:{l:'Heavy Showers',i:'⛈️'},
+		95:{l:'Thunderstorm',i:'⛈️'},96:{l:'Thunderstorm',i:'⛈️'},99:{l:'Thunderstorm',i:'⛈️'}
+	};
+
+	var currentRain = '--';
+	var currentAQIText = 'AQI --';
+	var aqiLoaded = false;
+
+	function fetchWeather(retry) {
+		fetch('https://api.open-meteo.com/v1/forecast?latitude='+W_LAT+'&longitude='+W_LON
+			+'&current=temperature_2m,weather_code,precipitation_probability'
+			+'&temperature_unit=celsius&timezone=Asia%2FColombo')
+		.then(function(r){return r.json();})
+		.then(function(d){
+			var tc   = Math.round(d.current.temperature_2m);
+			var tf   = Math.round(tc * 9/5 + 32);
+			var wc   = WC[d.current.weather_code] || {l:'Unknown',i:'🌡️'};
+			currentRain = Math.round(d.current.precipitation_probability);
+			document.getElementById('w-icon').textContent = wc.i;
+			document.getElementById('w-condition').textContent = wc.l + ' ' + tc + '\u00B0C / ' + tf + '\u00B0F';
+			document.getElementById('w-details').textContent = '\uD83C\uDF27\uFE0F ' + currentRain + '%  ' + currentAQIText;
+			if (!aqiLoaded) { aqiLoaded = true; fetchAQI(); }
+		})
+		.catch(function(){
+			var attempt = retry || 1;
+			if (attempt < 5) {
+				setTimeout(function(){ fetchWeather(attempt + 1); }, 5000);
+			} else {
+				document.getElementById('w-condition').textContent = '--';
+			}
+		});
+		setTimeout(fetchWeather, 600000);
+	}
+
+	function fetchAQI(retry) {
+		fetch('https://api.waqi.info/feed/geo:6.8589;81.8304/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
+		.then(function(r){return r.json();})
+		.then(function(d){
+			var aqi = (d.data && d.data.aqi) ? d.data.aqi : '--';
+			var icon;
+			if      (aqi <= 50)  { icon = '🟢'; }
+			else if (aqi <= 100) { icon = '🟡'; }
+			else if (aqi <= 150) { icon = '🟠'; }
+			else if (aqi <= 200) { icon = '🔴'; }
+			else                 { icon = '🟣'; }
+			currentAQIText = icon + ' AQI ' + aqi;
+			document.getElementById('w-details').textContent = '\uD83C\uDF27\uFE0F ' + currentRain + '%  ' + currentAQIText;
+		})
+		.catch(function(){
+			var attempt = retry || 1;
+			if (attempt < 5) {
+				setTimeout(function(){ fetchAQI(attempt + 1); }, 5000);
+			}
+		});
+		setTimeout(fetchAQI, 600000);
+	}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+	width: 1920px;
+	height: 1080px;
+	overflow: hidden;
+	background: transparent;
+}
+
+.wrap {
+	position: absolute;
+	top: 40px;
+	left: 40px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	animation: fadeIn 1s ease forwards;
+}
+
+.wrap .row-lg,
+.wrap .row-sm,
+.wrap .row-md {
+	margin-top: -6px;
+}
+
+@keyframes fadeIn {
+	from { opacity:0; transform:translateY(-8px); }
+	to   { opacity:1; transform:translateY(0); }
+}
+
+.row {
+	display: flex;
+	align-items: center;
+}
+
+.label {
+	font-family: 'Inter', Arial, sans-serif;
+	font-weight: 700;
+	color: #ffffff;
+	line-height: 1.2;
+	text-shadow:
+		2px  2px 8px rgba(0,0,0,0.9),
+		-2px -2px 8px rgba(0,0,0,0.9),
+		0px  3px 12px rgba(0,0,0,1),
+		0px -3px 12px rgba(0,0,0,1);
+	white-space: nowrap;
+}
+
+/* Time — hero */
+.row-xl { gap: 16px; }
+.row-xl .icon { font-size: 64px; width: 78px; text-align:center; flex-shrink:0; }
+.row-xl .label { font-size: 80px; }
+
+/* Location — medium */
+.row-lg { gap: 14px; }
+.row-lg .icon { font-size: 52px; width: 64px; text-align:center; flex-shrink:0; }
+.row-lg .label { font-size: 56px; }
+
+/* Weather — same as location */
+.row-sm { gap: 14px; }
+.row-sm .icon { font-size: 52px; width: 64px; text-align:center; flex-shrink:0; }
+.row-sm .label { font-size: 56px; font-weight: 700; }
+
+/* Rain + AQI row */
+.row-md { gap: 14px; }
+.row-md .label { font-size: 56px; font-weight: 700; padding-left: 20px; }
+</style>
+</head>
+<body onload="tempus(); fetchWeather();">
+	<div class="wrap">
+		<div class="row row-xl">
+			<span class="icon">🕐</span>
+			<span class="label" id="datetime">--:-- --</span>
+		</div>
+		<div class="row row-lg">
+			<span class="icon">📍</span>
+			<span class="label">Arugam Bay, Sri Lanka</span>
+		</div>
+		<div class="row row-sm">
+			<span class="icon" id="w-icon">⛅</span>
+			<span class="label" id="w-condition">Loading...</span>
+		</div>
+		<div class="row row-md">
+			<span class="label" id="w-details">🌧️ --% 🟢 AQI --</span>
+		</div>
+	</div>
+</body>
+</html>
