@@ -10,25 +10,22 @@
 	var currentRain = '--';
 	var currentAQIText = 'AQI --';
 	var aqiLoaded = false;
+	var aqiVisible = true;
 
-	function getLocalTime() {
-		return new Date(new Date().getTime() + W_OFFSET * 3600000);
-	}
-	function pad(n) { return n.toString().padStart(2,'0'); }
-
-	function ptime(now) {
-		var h = now.getUTCHours(), m = now.getUTCMinutes();
-		var ampm = h < 12 ? 'AM' : 'PM';
-		if (timeformat == '12') {
-			ampm = h < 12 ? 'AM' : 'PM';
+	function fmtTime(tz) {
+		try {
+			return new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit',hour12:true}).format(new Date());
+		} catch(e) {
+			var now = new Date(new Date().getTime() + W_OFFSET * 3600000);
+			var h = now.getUTCHours(), m = now.getUTCMinutes();
+			var ampm = h < 12 ? 'AM' : 'PM';
 			h = h % 12 || 12;
+			return (h < 10 ? '0'+h : h) + ':' + (m < 10 ? '0'+m : m) + ' ' + ampm;
 		}
-		return pad(h) + ':' + pad(m) + ' ' + ampm;
 	}
 
 	function tempus() {
-		var now = getLocalTime();
-		document.getElementById('datetime').textContent = ptime(now);
+		document.getElementById('datetime').textContent = fmtTime(W_TZ);
 		setTimeout(tempus, 1000);
 	}
 
@@ -40,6 +37,14 @@
 		80:{l:'Showers',i:'🌦️'},81:{l:'Showers',i:'🌦️'},82:{l:'Heavy Showers',i:'⛈️'},
 		95:{l:'Thunderstorm',i:'⛈️'},96:{l:'Thunderstorm',i:'⛈️'},99:{l:'Thunderstorm',i:'⛈️'}
 	};
+
+	function updateDetailsRow() {
+		if (!aqiVisible) {
+			document.getElementById('w-details').textContent = '\uD83C\uDF27\uFE0F ' + currentRain + '%';
+		} else {
+			document.getElementById('w-details').textContent = '\uD83C\uDF27\uFE0F ' + currentRain + '%  ' + currentAQIText;
+		}
+	}
 
 	function fetchWeather(retry) {
 		var tz = encodeURIComponent(W_TZ);
@@ -54,7 +59,7 @@
 			currentRain = Math.round(d.current.precipitation_probability);
 			document.getElementById('w-icon').textContent = wc.i;
 			document.getElementById('w-condition').textContent = wc.l + ' ' + tc + '\u00B0C / ' + tf + '\u00B0F';
-			document.getElementById('w-details').textContent = '\uD83C\uDF27\uFE0F ' + currentRain + '%  ' + currentAQIText;
+			updateDetailsRow();
 			if (!aqiLoaded) { aqiLoaded = true; fetchAQI(); }
 		})
 		.catch(function(){
@@ -69,10 +74,11 @@
 	}
 
 	function fetchAQI(retry) {
-		fetch('https://api.waqi.info/feed/geo:'+W_LAT+';'+W_LON+'/?token=d6c340b3c78a7517246cb960fd340e59f99190db')
+		fetch('https://api.airvisual.com/v2/nearest_city?lat='+W_LAT+'&lon='+W_LON+'&key=bc329e1c-b2a2-49ed-8e19-c84790789226')
 		.then(function(r){return r.json();})
 		.then(function(d){
-			var aqi = (d.data && d.data.aqi) ? d.data.aqi : '--';
+			if (!d.data || !d.data.current || !d.data.current.pollution) return;
+			var aqi = d.data.current.pollution.aqius;
 			var icon;
 			if      (aqi <= 50)  { icon = '🟢'; }
 			else if (aqi <= 100) { icon = '🟡'; }
@@ -80,7 +86,7 @@
 			else if (aqi <= 200) { icon = '🔴'; }
 			else                 { icon = '🟣'; }
 			currentAQIText = icon + ' AQI ' + aqi;
-			document.getElementById('w-details').textContent = '\uD83C\uDF27\uFE0F ' + currentRain + '%  ' + currentAQIText;
+			updateDetailsRow();
 		})
 		.catch(function(){
 			var attempt = retry || 1;
@@ -89,6 +95,17 @@
 			}
 		});
 		setTimeout(fetchAQI, 600000);
+	}
+
+	function fetchAqiStatus() {
+		fetch('https://cold-hat-e6a3.bernardmscott.workers.dev/aqi-status')
+		.then(function(r){ return r.text(); })
+		.then(function(t){
+			aqiVisible = t.trim() === 'true';
+			updateDetailsRow();
+		})
+		.catch(function(){});
+		setTimeout(fetchAqiStatus, 600000);
 	}
 
 	function fetchLocation(retry) {
@@ -102,6 +119,9 @@
 			document.getElementById('location').textContent = d.city;
 			tempus();
 			fetchWeather();
+			fetchAqiStatus();
+			// Start polling for location changes
+			startLocationPoll(d.city);
 		})
 		.catch(function(){
 			var attempt = retry || 1;
@@ -109,6 +129,24 @@
 				setTimeout(function(){ fetchLocation(attempt + 1); }, 5000);
 			}
 		});
+	}
+
+	function startLocationPoll(currentCity) {
+		setTimeout(function() {
+			fetch('https://cold-hat-e6a3.bernardmscott.workers.dev/location')
+			.then(function(r){ return r.json(); })
+			.then(function(d){
+				if (d.city && d.city !== currentCity) {
+					// Location changed — reload widget to apply new location
+					location.reload();
+				} else {
+					startLocationPoll(currentCity);
+				}
+			})
+			.catch(function(){
+				startLocationPoll(currentCity);
+			});
+		}, 60000);
 	}
 </script>
 
