@@ -133,20 +133,30 @@
 
 	function startLocationPoll(currentCity) {
 		setTimeout(function() {
-			fetch('https://cold-hat-e6a3.bernardmscott.workers.dev/location')
+			fetch('https://cold-hat-e6a3.bernardmscott.workers.dev/location?t=' + Date.now())
 			.then(function(r){ return r.json(); })
 			.then(function(d){
 				if (d.city && d.city !== currentCity) {
-					// Location changed — reload widget to apply new location
-					location.reload();
+					// Update all values in place — no reload needed
+					W_LAT    = d.lat;
+					W_LON    = d.lon;
+					W_TZ     = d.tz;
+					W_OFFSET = d.offset;
+					document.getElementById('location').textContent = d.city;
+					aqiLoaded = false;
+					currentRain = '--';
+					currentAQIText = 'AQI --';
+					fetchWeather();
+					fetchAqiStatus();
+					startLocationPoll(d.city);
 				} else {
-					startLocationPoll(currentCity);
+					startLocationPoll(d.city || currentCity);
 				}
 			})
 			.catch(function(){
 				startLocationPoll(currentCity);
 			});
-		}, 60000);
+		}, 30000);
 	}
 </script>
 
